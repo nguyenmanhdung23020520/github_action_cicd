@@ -19,14 +19,14 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
-          username: manhdung123123
-          password: nguyenmanhdung05072005
+          username: manhdung0507
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: your-dockerhub-username/cicd-demo:latest
+          tags: manhdung0507/cicd-demo:latest
 
       - name: Run tests
         run: npm test
