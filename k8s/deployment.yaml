@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
         - name: cicd-demo
-          image: manhdung0507/cicd-demo:64cb891
+          image: manhdung0507/cicd-demo:f2fb066
           ports:
             - containerPort: 3000
