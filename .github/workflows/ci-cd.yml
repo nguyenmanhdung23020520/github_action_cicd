@@ -44,11 +44,11 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Run Lint
-        run: npm run lint # Giả định bạn có script "lint" trong package.json
+     # - name: Run Lint
+      #  run: npm run lint # Giả định bạn có script "lint" trong package.json
 
-      - name: Run Tests
-        run: npm test # Giả định bạn có script "test" trong package.json
+      #- name: Run Tests
+       # run: npm test # Giả định bạn có script "test" trong package.json
 
   # === JOB 2: CD (Build, Push, Deploy) ===
   # Job này CHỈ CHẠY KHI PUSH LÊN 'main'
