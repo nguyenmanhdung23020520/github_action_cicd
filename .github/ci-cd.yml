@@ -1,0 +1,85 @@
+name: CI/CD - Build, Push, and Update Config Repo
+
+on:
+  push:
+    branches:
+      - main # Chỉ chạy khi push lên nhánh main
+
+env:
+  # === THAY THẾ CÁC GIÁ TRỊ NÀY ===
+  
+  DOCKER_IMAGE_NAME: manhdung0507/cicd-demo 
+  
+  # Tên repo cấu hình của bạn (ví dụ: 'my-app-gitops-config')
+  CONFIG_REPO_NAME: github_action_cicd 
+  
+  # Đường dẫn đến file deployment trong repo cấu hình
+  CONFIG_REPO_PATH: k8s/deployment.yaml 
+  
+  # ==================================
+
+jobs:
+  build-push-and-update:
+    runs-on: ubuntu-latest
+    steps:
+      
+      # 1. Checkout repo code (your-app-repo)
+      - name: Checkout App Repo
+        uses: actions/checkout@v3
+
+      # 2. Đăng nhập Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      # 3. Lấy Git SHA ngắn làm image tag (ví dụ: a1b2c3d)
+      - name: Get short Git SHA
+        id: vars
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      # 4. Build và đẩy (push) Docker image
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ env.DOCKER_IMAGE_NAME }}:${{ steps.vars.outputs.sha }}
+
+      # 5. Checkout repo cấu hình (my-app-gitops-config)
+      - name: Checkout Config Repo
+        uses: actions/checkout@v3
+        with:
+          # ${github.repository_owner} sẽ tự lấy tên user/org của bạn
+          repository: ${{ github.repository_owner }}/${{ env.CONFIG_REPO_NAME }}
+          token: ${{ secrets.PAT_FOR_CONFIG_REPO }}
+          path: 'config-repo' # Checkout vào thư mục con tên là 'config-repo'
+
+      # 6. Cập nhật image tag trong file deployment.yaml
+      - name: Update image tag in deployment.yaml
+        run: |
+          cd config-repo
+          
+          echo "Updating image tag to: ${{ env.DOCKER_IMAGE_NAME }}:${{ steps.vars.outputs.sha }}"
+          
+          # Sử dụng 'sed' để thay thế tag cũ bằng tag mới (Git SHA ngắn)
+          # Lệnh này tìm dòng 'image: ...' và thay thế nó
+          sed -i 's|image: ${{ env.DOCKER_IMAGE_NAME }}:.*|image: ${{ env.DOCKER_IMAGE_NAME }}:${{ steps.vars.outputs.sha }}|' ${{ env.CONFIG_REPO_PATH }}
+          
+          # Cấu hình Git user
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          # Commit và đẩy (push) thay đổi lên repo cấu hình
+          git add .
+          
+          # Kiểm tra xem có gì thay đổi không
+          if git diff-index --quiet HEAD; then
+            echo "No changes to commit."
+          else
+            git commit -m "Update image tag to ${{ steps.vars.outputs.sha }}"
+            git push
+            echo "Changes pushed to config repo."
+          fi
